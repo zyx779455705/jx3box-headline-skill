@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+SKILL_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+if command -v python3 >/dev/null 2>&1; then
+    RUNTIME_PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+    RUNTIME_PYTHON=python
+else
+    printf '%s\n' '{"error":"Python 3.10+ was not found","error_type":"runtime","hint":"Install Python and retry."}' >&2
+    exit 1
+fi
+
+exec "$RUNTIME_PYTHON" "$SKILL_ROOT/scripts/headline_brief.py" "$@"

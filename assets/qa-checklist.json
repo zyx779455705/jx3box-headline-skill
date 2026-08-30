@@ -1,0 +1,52 @@
+{
+  "skill": "jx3box-headline-skill",
+  "version": "1.0.0",
+  "checks": [
+    {
+      "id": "canvas",
+      "required": true,
+      "text": "Canvas is exactly 3200x560 or 1600x280 (40:7)."
+    },
+    {
+      "id": "safe-area",
+      "required": true,
+      "text": "Main title, subtitle, author, and required attribution stay inside the centered 1160px or 580px safe width."
+    },
+    {
+      "id": "title",
+      "required": true,
+      "text": "Main title is concise, preserves article meaning, and is readable at 25% scale."
+    },
+    {
+      "id": "exact-text",
+      "required": true,
+      "text": "Every Chinese character is exact; no generated pseudo-glyphs, omissions, or substitutions remain."
+    },
+    {
+      "id": "hierarchy",
+      "required": true,
+      "text": "Main title dominates subtitle, author, English decoration, and attribution."
+    },
+    {
+      "id": "subject",
+      "required": true,
+      "text": "Faces, weapons, actions, and other key subjects are not needlessly obscured."
+    },
+    {
+      "id": "composition",
+      "required": true,
+      "text": "One primary composition mode governs alignment, motion, layering, and decoration."
+    },
+    {
+      "id": "rights",
+      "required": true,
+      "text": "Every image, texture, illustration, and font has verified rights for the actual commercial or non-commercial context."
+    },
+    {
+      "id": "attribution",
+      "required": true,
+      "text": "Required attribution is accurate, inside the safe area, and genuinely readable."
+    }
+  ]
+}
+
