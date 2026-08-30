@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Validate and normalize a JX3BOX headline design brief.
 
-The script enforces the two supported canvas sizes, centered safe widths,
-conservative image/font rights checks, composition selection, and a stable QA
-contract. It produces JSON only; creative bitmap work remains with the host's
-image generation or editing tool.
+The script enforces supported presets or an explicit custom canvas, safe-area
+bounds, conservative image/font rights checks, composition selection, and a
+stable QA contract. It produces JSON only; creative bitmap work remains with
+the host's image generation or editing tool.
 
 Example:
     python scripts/headline_brief.py --input brief.json --output validated.json
@@ -14,20 +14,83 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
 
 
 SKILL_NAME = "jx3box-headline-skill"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 MIN_PYTHON = (3, 10)
 ALLOWED_RESOLUTIONS = {
-    "high": {"width": 3200, "height": 560, "safe_width": 1160},
-    "standard": {"width": 1600, "height": 280, "safe_width": 580},
+    "high": {
+        "width": 3200,
+        "height": 560,
+        "safe_area": {"x": 1020, "y": 0, "width": 1160, "height": 560},
+    },
+    "standard": {
+        "width": 1600,
+        "height": 280,
+        "safe_area": {"x": 510, "y": 0, "width": 580, "height": 280},
+    },
+    "compact": {
+        "width": 600,
+        "height": 200,
+        "safe_area": {"x": 90, "y": 16, "width": 420, "height": 168},
+    },
 }
+MIN_CANVAS_EDGE = 64
+MAX_CANVAS_EDGE = 16384
 ALLOWED_COMPOSITIONS = {"auto", "direct", "flow", "interlock"}
 ALLOWED_SUBJECT_POSITIONS = {"left", "center", "right", "both", "none"}
+ALLOWED_ATTRIBUTION_PLACEMENTS = {"artwork", "metadata", "readme", "none"}
+ALLOWED_INPUT_FIELDS = {
+    "article_title",
+    "main_title",
+    "subtitle",
+    "author",
+    "resolution",
+    "composition_mode",
+    "subject_position",
+    "layering_requested",
+    "commercial_context",
+    "notes",
+    "font",
+    "source_assets",
+}
+TEXT_INPUT_FIELDS = {
+    "article_title",
+    "main_title",
+    "subtitle",
+    "author",
+    "composition_mode",
+    "subject_position",
+    "notes",
+}
+BOOLEAN_INPUT_FIELDS = {"layering_requested", "commercial_context"}
+RIGHTS_ITEM_FIELDS = {
+    "id",
+    "name",
+    "label",
+    "creator",
+    "source",
+    "rights_status",
+    "commercial_allowed",
+    "attribution",
+    "attribution_required",
+    "attribution_placement",
+}
+RIGHTS_TEXT_FIELDS = {
+    "id",
+    "name",
+    "label",
+    "creator",
+    "source",
+    "rights_status",
+    "attribution",
+    "attribution_placement",
+}
 ALLOWED_RIGHTS = {
     "owned",
     "explicit-permission",
@@ -122,16 +185,84 @@ def load_input(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _normalize_resolution(value: object) -> tuple[str, dict[str, int]]:
-    """Resolve a named or explicit supported canvas specification."""
+def _is_integer(value: object) -> bool:
+    """Return whether value is an integer but not a boolean."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validate_safe_area(
+    raw: object,
+    *,
+    width: int,
+    height: int,
+    field: str,
+) -> dict[str, int]:
+    """Validate and normalize a safe-area rectangle inside a canvas."""
+    if not isinstance(raw, dict):
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": field, "error": "must be an object with x, y, width, and height"}],
+        )
+    unknown = sorted(set(raw) - {"x", "y", "width", "height"})
+    if unknown:
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": field, "error": f"unsupported fields: {', '.join(unknown)}"}],
+        )
+    values = {key: raw.get(key) for key in ("x", "y", "width", "height")}
+    invalid = [key for key, item in values.items() if not _is_integer(item)]
+    if invalid:
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": f"{field}.{key}", "error": "must be an integer"} for key in invalid],
+        )
+    safe = {key: int(item) for key, item in values.items()}
+    if safe["x"] < 0 or safe["y"] < 0 or safe["width"] <= 0 or safe["height"] <= 0:
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": field, "error": "x/y must be non-negative and width/height must be positive"}],
+        )
+    if safe["x"] + safe["width"] > width or safe["y"] + safe["height"] > height:
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": field, "error": "must stay inside the canvas"}],
+        )
+    return safe
+
+
+def _normalize_resolution(value: object) -> tuple[str, dict[str, Any]]:
+    """Resolve a named preset or an explicit custom canvas specification."""
     if value is None:
         name = "high"
     elif isinstance(value, str):
         name = value.strip().lower()
     elif isinstance(value, dict):
+        unknown = sorted(set(value) - {"width", "height", "safe_area"})
+        if unknown:
+            raise BriefValidationError(
+                "Input validation failed",
+                [{"field": "resolution", "error": f"unsupported fields: {', '.join(unknown)}"}],
+            )
         width = value.get("width")
         height = value.get("height")
-        name = next(
+        if not _is_integer(width) or not _is_integer(height):
+            raise BriefValidationError(
+                "Input validation failed",
+                [{"field": "resolution", "error": "width and height must be integers"}],
+            )
+        width = int(width)
+        height = int(height)
+        if not (MIN_CANVAS_EDGE <= width <= MAX_CANVAS_EDGE):
+            raise BriefValidationError(
+                "Input validation failed",
+                [{"field": "resolution.width", "error": f"must be {MIN_CANVAS_EDGE}-{MAX_CANVAS_EDGE}"}],
+            )
+        if not (MIN_CANVAS_EDGE <= height <= MAX_CANVAS_EDGE):
+            raise BriefValidationError(
+                "Input validation failed",
+                [{"field": "resolution.height", "error": f"must be {MIN_CANVAS_EDGE}-{MAX_CANVAS_EDGE}"}],
+            )
+        preset_name = next(
             (
                 key
                 for key, spec in ALLOWED_RESOLUTIONS.items()
@@ -139,6 +270,32 @@ def _normalize_resolution(value: object) -> tuple[str, dict[str, int]]:
             ),
             "",
         )
+        if preset_name:
+            preset = ALLOWED_RESOLUTIONS[preset_name]
+            if "safe_area" in value:
+                supplied_safe = _validate_safe_area(
+                    value["safe_area"],
+                    width=width,
+                    height=height,
+                    field="resolution.safe_area",
+                )
+                if supplied_safe != preset["safe_area"]:
+                    raise BriefValidationError(
+                        "Input validation failed",
+                        [{"field": "resolution.safe_area", "error": f"must match the {preset_name} preset"}],
+                    )
+            return preset_name, {
+                "width": width,
+                "height": height,
+                "safe_area": dict(preset["safe_area"]),
+            }
+        safe_area = _validate_safe_area(
+            value.get("safe_area"),
+            width=width,
+            height=height,
+            field="resolution.safe_area",
+        )
+        return "custom", {"width": width, "height": height, "safe_area": safe_area}
     else:
         name = ""
     if name not in ALLOWED_RESOLUTIONS:
@@ -147,22 +304,35 @@ def _normalize_resolution(value: object) -> tuple[str, dict[str, int]]:
             [
                 {
                     "field": "resolution",
-                    "error": "must be high, standard, 3200x560, or 1600x280",
+                    "error": "must be high, standard, compact, or an explicit canvas with safe_area",
                 }
             ],
         )
-    return name, dict(ALLOWED_RESOLUTIONS[name])
+    preset = ALLOWED_RESOLUTIONS[name]
+    return name, {
+        "width": preset["width"],
+        "height": preset["height"],
+        "safe_area": dict(preset["safe_area"]),
+    }
+
+
+def _aspect_ratio(width: int, height: int) -> str:
+    """Return the reduced integer aspect ratio for a canvas."""
+    divisor = math.gcd(width, height)
+    return f"{width // divisor}:{height // divisor}"
 
 
 def _normalize_rights_item(
     raw: object,
     *,
+    item_id: str,
     field: str,
     commercial_context: bool,
 ) -> dict[str, Any]:
     """Normalize and conservatively approve or block one rights record."""
     if not isinstance(raw, dict):
         return {
+            "id": item_id,
             "label": field,
             "rights_status": "unknown",
             "approved": False,
@@ -170,15 +340,25 @@ def _normalize_rights_item(
             "creator": "",
             "source": "",
             "attribution": "",
+            "attribution_required": False,
+            "attribution_placement": "none",
             "commercial_allowed": False,
         }
 
+    normalized_id = _text(raw.get("id")) or item_id
     label = _text(raw.get("label")) or _text(raw.get("name")) or field
     status = _text(raw.get("rights_status")).lower() or "unknown"
     creator = _text(raw.get("creator"))
     source = _text(raw.get("source"))
     attribution = _text(raw.get("attribution"))
     commercial_allowed = raw.get("commercial_allowed") is True
+    raw_required = raw.get("attribution_required")
+    attribution_required = (
+        raw_required if isinstance(raw_required, bool) else status in THIRD_PARTY_RIGHTS
+    )
+    attribution_placement = _text(raw.get("attribution_placement")).lower()
+    if not attribution_placement:
+        attribution_placement = "metadata" if attribution_required else "none"
 
     reasons: list[str] = []
     if status not in ALLOWED_RIGHTS:
@@ -192,11 +372,21 @@ def _normalize_rights_item(
         reasons.append("public-domain claim needs a source")
     if commercial_context and status != "public-domain" and not commercial_allowed:
         reasons.append("commercial use is not explicitly allowed")
+    if raw_required is not None and not isinstance(raw_required, bool):
+        reasons.append("attribution_required must be a boolean")
+    if attribution_placement not in ALLOWED_ATTRIBUTION_PLACEMENTS:
+        reasons.append(f"unsupported attribution_placement: {attribution_placement}")
+        attribution_placement = "metadata"
 
     if not attribution and status in THIRD_PARTY_RIGHTS and creator and source:
         attribution = f"{creator} · {source}"
+    if attribution_required and not attribution:
+        reasons.append("required attribution text is missing")
+    if attribution_required and attribution_placement == "none":
+        reasons.append("required attribution needs artwork, metadata, or readme placement")
 
     return {
+        "id": normalized_id,
         "label": label,
         "rights_status": status,
         "approved": not reasons,
@@ -204,8 +394,39 @@ def _normalize_rights_item(
         "creator": creator,
         "source": source,
         "attribution": attribution,
+        "attribution_required": attribution_required,
+        "attribution_placement": attribution_placement,
         "commercial_allowed": commercial_allowed or status == "public-domain",
     }
+
+
+def _rights_structure_errors(raw: object, field: str) -> list[dict[str, str]]:
+    """Return JSON-Schema-aligned structural errors for a rights record."""
+    if not isinstance(raw, dict):
+        return [{"field": field, "error": "must be an object"}]
+    errors: list[dict[str, str]] = []
+    unknown = sorted(set(raw) - RIGHTS_ITEM_FIELDS)
+    if unknown:
+        errors.append({"field": field, "error": f"unsupported fields: {', '.join(unknown)}"})
+    if not (_text(raw.get("name")) or _text(raw.get("label"))):
+        errors.append({"field": field, "error": "must include a non-empty name or label"})
+    status = _text(raw.get("rights_status")).lower()
+    if not status:
+        errors.append({"field": f"{field}.rights_status", "error": "is required"})
+    elif status not in ALLOWED_RIGHTS:
+        errors.append({"field": f"{field}.rights_status", "error": "has an unsupported value"})
+    placement = _text(raw.get("attribution_placement")).lower()
+    if placement and placement not in ALLOWED_ATTRIBUTION_PLACEMENTS:
+        errors.append(
+            {"field": f"{field}.attribution_placement", "error": "has an unsupported value"}
+        )
+    for key in RIGHTS_TEXT_FIELDS:
+        if key in raw and not isinstance(raw[key], str):
+            errors.append({"field": f"{field}.{key}", "error": "must be a string"})
+    for key in ("commercial_allowed", "attribution_required"):
+        if key in raw and not isinstance(raw[key], bool):
+            errors.append({"field": f"{field}.{key}", "error": "must be a boolean"})
+    return errors
 
 
 def _select_composition(
@@ -234,7 +455,7 @@ def _composition_plan(mode: str, subject_position: str) -> dict[str, Any]:
     """Return mode-specific actions and a safe title bias."""
     plans: dict[str, list[str]] = {
         "direct": [
-            "Place exact title copy in the centered safe area.",
+            "Place exact title copy in the declared safe area.",
             "Adjust local background brightness before adding text effects.",
             "Use shadow, stroke, glow, or gradient only when contrast still needs help.",
         ],
@@ -294,6 +515,31 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
     errors: list[dict[str, str]] = []
     warnings: list[str] = []
 
+    unknown_fields = sorted(set(payload) - ALLOWED_INPUT_FIELDS)
+    if unknown_fields:
+        errors.append(
+            {
+                "field": "$",
+                "error": f"unsupported fields: {', '.join(unknown_fields)}",
+            }
+        )
+    for field in TEXT_INPUT_FIELDS:
+        if field in payload and not isinstance(payload[field], str):
+            errors.append({"field": field, "error": "must be a string"})
+    for field in BOOLEAN_INPUT_FIELDS:
+        if field in payload and not isinstance(payload[field], bool):
+            errors.append({"field": field, "error": "must be a boolean"})
+
+    raw_assets = payload.get("source_assets", [])
+    if not isinstance(raw_assets, list):
+        errors.append({"field": "source_assets", "error": "must be an array"})
+    else:
+        for index, item in enumerate(raw_assets):
+            errors.extend(_rights_structure_errors(item, f"source_assets[{index}]"))
+    font_raw = payload.get("font")
+    if font_raw is not None:
+        errors.extend(_rights_structure_errors(font_raw, "font"))
+
     article_title = _text(payload.get("article_title"))
     main_title = _text(payload.get("main_title"))
     subtitle = _text(payload.get("subtitle"))
@@ -334,41 +580,38 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
         raise BriefValidationError("Input validation failed", errors)
 
     resolution_name, canvas_spec = _normalize_resolution(payload.get("resolution"))
-    safe_x = (canvas_spec["width"] - canvas_spec["safe_width"]) // 2
     canvas = {
         "name": resolution_name,
         "width": canvas_spec["width"],
         "height": canvas_spec["height"],
-        "aspect_ratio": "40:7",
-        "safe_area": {
-            "x": safe_x,
-            "y": 0,
-            "width": canvas_spec["safe_width"],
-            "height": canvas_spec["height"],
-        },
+        "aspect_ratio": _aspect_ratio(canvas_spec["width"], canvas_spec["height"]),
+        "safe_area": dict(canvas_spec["safe_area"]),
     }
 
-    raw_assets = payload.get("source_assets", [])
-    if not isinstance(raw_assets, list):
-        raise BriefValidationError(
-            "Input validation failed",
-            [{"field": "source_assets", "error": "must be an array"}],
-        )
+    assert isinstance(raw_assets, list)
     assets = [
         _normalize_rights_item(
             item,
+            item_id=f"asset-{index + 1}",
             field=f"source_assets[{index}]",
             commercial_context=commercial_context,
         )
         for index, item in enumerate(raw_assets)
     ]
+    asset_ids = [item["id"] for item in assets]
+    duplicate_ids = sorted({item_id for item_id in asset_ids if asset_ids.count(item_id) > 1})
+    if duplicate_ids:
+        raise BriefValidationError(
+            "Input validation failed",
+            [{"field": "source_assets", "error": f"duplicate asset ids: {', '.join(duplicate_ids)}"}],
+        )
     approved_assets = [item for item in assets if item["approved"]]
     blocked_assets = [item for item in assets if not item["approved"]]
 
-    font_raw = payload.get("font")
     if font_raw is None:
         font = _normalize_rights_item(
             {"label": "font", "rights_status": "unknown"},
+            item_id="font",
             field="font",
             commercial_context=commercial_context,
         )
@@ -376,6 +619,7 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
     else:
         font = _normalize_rights_item(
             font_raw,
+            item_id="font",
             field="font",
             commercial_context=commercial_context,
         )
@@ -396,13 +640,25 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
     composition = _composition_plan(mode, subject_position)
     composition["rationale"] = rationale
 
-    attribution_lines = [
-        item["attribution"]
-        for item in approved_assets
+    attributable_items = [*approved_assets]
+    if font["approved"]:
+        attributable_items.append(font)
+    attribution_records = [
+        {
+            "id": item["id"],
+            "label": item["label"],
+            "text": item["attribution"],
+            "required": item["attribution_required"],
+            "placement": item["attribution_placement"],
+        }
+        for item in attributable_items
         if item["attribution"]
     ]
-    if font["approved"] and font["attribution"]:
-        attribution_lines.append(font["attribution"])
+    artwork_attribution_lines = [
+        record["text"]
+        for record in attribution_records
+        if record["placement"] == "artwork"
+    ]
 
     ready_for_render = not blocked_assets and font["approved"]
     result = {
@@ -416,11 +672,11 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
             "main_title_units": title_units,
             "subtitle": subtitle,
             "author": author,
-            "hierarchy": ["main_title", "subtitle", "author", "attribution"],
+            "hierarchy": ["main_title", "subtitle", "author", "artwork_attribution"],
         },
         "composition": composition,
         "typography": {
-            "alignment": "centered safe-area composition with explicit alignment lines",
+            "alignment": "declared safe-area composition with explicit alignment lines",
             "exact_text_required": True,
             "model_generated_final_chinese_text_allowed": False,
             "font": font,
@@ -434,7 +690,9 @@ def build_brief(payload: dict[str, Any]) -> dict[str, Any]:
             "commercial_context": commercial_context,
             "approved_assets": approved_assets,
             "blocked_assets": blocked_assets,
-            "attribution_lines": attribution_lines,
+            "artwork_attribution_lines": artwork_attribution_lines,
+            "attribution_records": attribution_records,
+            "attribution_lines": artwork_attribution_lines,
             "unknown_rights_are_permission": False,
         },
         "asset_strategy": (
@@ -452,17 +710,23 @@ def _sanity_check(result: dict[str, Any]) -> None:
     """Reject impossible validator output before it reaches an image workflow."""
     canvas = result["canvas"]
     safe = canvas["safe_area"]
-    expected = ALLOWED_RESOLUTIONS[canvas["name"]]
     errors: list[dict[str, str]] = []
-    if canvas["width"] * 7 != canvas["height"] * 40:
-        errors.append({"field": "canvas", "error": "aspect ratio drifted from 40:7"})
-    if safe["width"] != expected["safe_width"]:
-        errors.append({"field": "canvas.safe_area.width", "error": "safe width is incorrect"})
-    if safe["x"] < 0 or safe["x"] + safe["width"] > canvas["width"]:
+    if canvas["aspect_ratio"] != _aspect_ratio(canvas["width"], canvas["height"]):
+        errors.append({"field": "canvas", "error": "aspect ratio label is incorrect"})
+    if canvas["name"] in ALLOWED_RESOLUTIONS:
+        expected = ALLOWED_RESOLUTIONS[canvas["name"]]
+        if safe != expected["safe_area"]:
+            errors.append({"field": "canvas.safe_area", "error": "preset safe area is incorrect"})
+    if (
+        safe["x"] < 0
+        or safe["y"] < 0
+        or safe["x"] + safe["width"] > canvas["width"]
+        or safe["y"] + safe["height"] > canvas["height"]
+    ):
         errors.append({"field": "canvas.safe_area", "error": "safe area is outside canvas"})
-    approved_labels = {item["label"] for item in result["rights"]["approved_assets"]}
-    blocked_labels = {item["label"] for item in result["rights"]["blocked_assets"]}
-    if approved_labels & blocked_labels:
+    approved_ids = {item["id"] for item in result["rights"]["approved_assets"]}
+    blocked_ids = {item["id"] for item in result["rights"]["blocked_assets"]}
+    if approved_ids & blocked_ids:
         errors.append({"field": "rights", "error": "an asset cannot be both approved and blocked"})
     if errors:
         raise RuntimeError(json.dumps(errors, ensure_ascii=False))
@@ -552,6 +816,13 @@ def _emit_error(error: Exception, error_type: str, hint: str) -> None:
 
 def main() -> int:
     """Run the validator CLI and return a process exit code."""
+    if sys.version_info < MIN_PYTHON:
+        _emit_error(
+            RuntimeError(f"Python {'.'.join(map(str, MIN_PYTHON))}+ is required"),
+            "runtime",
+            "Install a supported Python version and run the command again.",
+        )
+        return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, help="UTF-8 JSON design brief")
     parser.add_argument("--output", type=Path, help="Validated JSON output path")

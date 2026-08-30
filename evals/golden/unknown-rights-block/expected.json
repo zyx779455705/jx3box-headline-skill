@@ -1,0 +1,146 @@
+{
+  "skill": "jx3box-headline-skill",
+  "version": "1.1.0",
+  "ready_for_render": false,
+  "canvas": {
+    "name": "standard",
+    "width": 1600,
+    "height": 280,
+    "aspect_ratio": "40:7",
+    "safe_area": {
+      "x": 510,
+      "y": 0,
+      "width": 580,
+      "height": 280
+    }
+  },
+  "copy": {
+    "article_title": "蓬莱门派剧情与设定整理",
+    "main_title": "蓬莱旧梦",
+    "main_title_units": 4,
+    "subtitle": "门派剧情与设定整理",
+    "author": "",
+    "hierarchy": [
+      "main_title",
+      "subtitle",
+      "author",
+      "artwork_attribution"
+    ]
+  },
+  "composition": {
+    "mode": "direct",
+    "title_bias": "bias title to the left half of the safe area",
+    "actions": [
+      "Place exact title copy in the declared safe area.",
+      "Adjust local background brightness before adding text effects.",
+      "Use shadow, stroke, glow, or gradient only when contrast still needs help."
+    ],
+    "rationale": "User selected a strong-background direct text composition."
+  },
+  "typography": {
+    "alignment": "declared safe-area composition with explicit alignment lines",
+    "exact_text_required": true,
+    "model_generated_final_chinese_text_allowed": false,
+    "font": {
+      "id": "font",
+      "label": "示例开放字体",
+      "rights_status": "open",
+      "approved": true,
+      "reason": "verified for the stated use",
+      "creator": "示例字体项目",
+      "source": "https://example.invalid/open-font-license",
+      "attribution": "示例字体项目 · https://example.invalid/open-font-license",
+      "attribution_required": true,
+      "attribution_placement": "metadata",
+      "commercial_allowed": true
+    },
+    "contrast_sequence": [
+      "test black or white title",
+      "adjust local background brightness",
+      "add restrained shadow/stroke/glow if still needed"
+    ]
+  },
+  "rights": {
+    "commercial_context": false,
+    "approved_assets": [],
+    "blocked_assets": [
+      {
+        "id": "asset-1",
+        "label": "搜索引擎找到的插画",
+        "rights_status": "unknown",
+        "approved": false,
+        "reason": "rights are unknown or explicitly prohibited",
+        "creator": "",
+        "source": "",
+        "attribution": "",
+        "attribution_required": false,
+        "attribution_placement": "none",
+        "commercial_allowed": false
+      }
+    ],
+    "artwork_attribution_lines": [],
+    "attribution_records": [
+      {
+        "id": "font",
+        "label": "示例开放字体",
+        "text": "示例字体项目 · https://example.invalid/open-font-license",
+        "required": true,
+        "placement": "metadata"
+      }
+    ],
+    "attribution_lines": [],
+    "unknown_rights_are_permission": false
+  },
+  "asset_strategy": "generate-original-no-text-background",
+  "notes": "此素材必须被拦截并替换",
+  "qa_checklist": [
+    {
+      "id": "canvas",
+      "required": true,
+      "text": "Canvas matches the requested 3200x560, 1600x280, 600x200, or explicit custom dimensions."
+    },
+    {
+      "id": "safe-area",
+      "required": true,
+      "text": "Main title, subtitle, author, and any artwork attribution stay inside the declared safe-area rectangle."
+    },
+    {
+      "id": "title",
+      "required": true,
+      "text": "Main title is concise, preserves article meaning, and is readable at 25% scale."
+    },
+    {
+      "id": "exact-text",
+      "required": true,
+      "text": "Every Chinese character is exact; no generated pseudo-glyphs, omissions, or substitutions remain."
+    },
+    {
+      "id": "hierarchy",
+      "required": true,
+      "text": "Main title dominates subtitle, author, English decoration, and attribution."
+    },
+    {
+      "id": "subject",
+      "required": true,
+      "text": "Faces, weapons, actions, and other key subjects are not needlessly obscured."
+    },
+    {
+      "id": "composition",
+      "required": true,
+      "text": "One primary composition mode governs alignment, motion, layering, and decoration."
+    },
+    {
+      "id": "rights",
+      "required": true,
+      "text": "Every image, texture, illustration, and font has verified rights for the actual commercial or non-commercial context."
+    },
+    {
+      "id": "attribution",
+      "required": true,
+      "text": "Attribution is accurate and placed where its license requires: artwork, metadata, or documentation."
+    }
+  ],
+  "_warnings": [
+    "One or more source assets are blocked; replace them before generating the final headline."
+  ]
+}

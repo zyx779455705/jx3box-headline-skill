@@ -7,15 +7,17 @@ The skill succeeds when its deterministic design brief is structurally valid and
 1. `valid-json` — the produced validator output is valid UTF-8 JSON.
 2. `supported-canvas` — canvas and centered safe width are exactly one supported JX3BOX pair.
 3. `rights-conservative` — no `unknown` or `prohibited` item appears in approved assets, and the output never treats silence as permission.
-4. `semantic-title` — an LLM judge confirms the short main title preserves the source article's object and intent, while the subtitle carries omitted detail.
-5. `composition-quality` — an LLM judge confirms one primary mode governs hierarchy, direction, subject placement, and effects.
-6. `exact-readable-copy` — an LLM judge confirms final Chinese copy is exact, readable at reduced scale, and not generated pseudo-text.
+4. `golden-baseline` — rollout output is JSON-equal to the accepted deterministic baseline (enforced by `run_evals.py --rollout`).
+5. `semantic-title` — an LLM judge confirms the short main title preserves the source article's object and intent, while the subtitle carries omitted detail.
+6. `composition-quality` — an LLM judge confirms one primary mode governs hierarchy, direction, subject placement, and effects.
+7. `exact-readable-copy` — an LLM judge confirms final Chinese copy is exact, readable at reduced scale, and not generated pseudo-text.
 
-The golden inputs are synthetic coverage cases based on the three user-supplied article workflows. They remain `pending-first-green` until the user accepts a first passing baseline.
+The golden inputs are synthetic coverage cases based on the three user-supplied article workflows. The deterministic validator outputs are committed baselines; creative bitmap quality remains an explicit LLM/human review step.
 
 ```json
 {
   "skill": "jx3box-headline-skill",
+  "run": "python scripts/headline_brief.py --input {input} --output {output}",
   "criteria": [
     {
       "id": "valid-json",
@@ -25,9 +27,9 @@ The golden inputs are synthetic coverage cases based on the three user-supplied 
     },
     {
       "id": "supported-canvas",
-      "text": "Canvas and centered safe area match a supported JX3BOX pair",
+      "text": "Canvas dimensions, aspect label, and safe area are internally valid",
       "type": "command",
-      "cmd": "python -c \"import json,sys; d=json.load(open(sys.argv[1], encoding='utf-8')); c=d['canvas']; s=c['safe_area']; assert (c['width'],c['height'],s['x'],s['width']) in [(3200,560,1020,1160),(1600,280,510,580)]\" {output}"
+      "cmd": "python -c \"import json,sys,math; d=json.load(open(sys.argv[1], encoding='utf-8')); c=d['canvas']; s=c['safe_area']; g=math.gcd(c['width'],c['height']); assert c['aspect_ratio']==f'{c[\\\"width\\\"]//g}:{c[\\\"height\\\"]//g}' and s['x']>=0 and s['y']>=0 and s['width']>0 and s['height']>0 and s['x']+s['width']<=c['width'] and s['y']+s['height']<=c['height']\" {output}"
     },
     {
       "id": "rights-conservative",
@@ -55,25 +57,24 @@ The golden inputs are synthetic coverage cases based on the three user-supplied 
     {
       "id": "long-title-compression",
       "input": "golden/long-title-compression/input.json",
-      "expected": null,
+      "expected": "golden/long-title-compression/expected.json",
       "split": "val",
-      "expected_status": "pending-first-green"
+      "expected_status": "accepted"
     },
     {
       "id": "owned-game-screenshot",
       "input": "golden/owned-game-screenshot/input.json",
-      "expected": null,
+      "expected": "golden/owned-game-screenshot/expected.json",
       "split": "val",
-      "expected_status": "pending-first-green"
+      "expected_status": "accepted"
     },
     {
       "id": "unknown-rights-block",
       "input": "golden/unknown-rights-block/input.json",
-      "expected": null,
+      "expected": "golden/unknown-rights-block/expected.json",
       "split": "val",
-      "expected_status": "pending-first-green"
+      "expected_status": "accepted"
     }
   ]
 }
 ```
-

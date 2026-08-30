@@ -8,9 +8,27 @@ $ErrorActionPreference = "Stop"
 $SkillRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 try {
-    $RuntimePython = (Get-Command python -ErrorAction Stop).Source
+    $RuntimePython = $null
+    $RuntimePrefix = @()
+    $Candidates = @(
+        @{ Name = "python"; Prefix = @() },
+        @{ Name = "py"; Prefix = @("-3") }
+    )
+    foreach ($Candidate in $Candidates) {
+        $Command = Get-Command $Candidate.Name -ErrorAction SilentlyContinue
+        if (-not $Command) { continue }
+        $Version = & $Command.Source @($Candidate.Prefix) -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}'); raise SystemExit(sys.version_info < (3, 10))" 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $RuntimePython = $Command.Source
+            $RuntimePrefix = @($Candidate.Prefix)
+            break
+        }
+    }
+    if (-not $RuntimePython) {
+        throw "Python 3.10+ was not found (checked 'python' and 'py -3')."
+    }
     $ScriptPath = Join-Path $SkillRoot "scripts\headline_brief.py"
-    & $RuntimePython $ScriptPath @RemainingArgs
+    & $RuntimePython @RuntimePrefix $ScriptPath @RemainingArgs
     exit $LASTEXITCODE
 }
 catch {

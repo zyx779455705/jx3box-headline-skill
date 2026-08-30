@@ -1,16 +1,16 @@
 {
   "skill": "jx3box-headline-skill",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "checks": [
     {
       "id": "canvas",
       "required": true,
-      "text": "Canvas is exactly 3200x560 or 1600x280 (40:7)."
+      "text": "Canvas matches the requested 3200x560, 1600x280, 600x200, or explicit custom dimensions."
     },
     {
       "id": "safe-area",
       "required": true,
-      "text": "Main title, subtitle, author, and required attribution stay inside the centered 1160px or 580px safe width."
+      "text": "Main title, subtitle, author, and any artwork attribution stay inside the declared safe-area rectangle."
     },
     {
       "id": "title",
@@ -45,8 +45,7 @@
     {
       "id": "attribution",
       "required": true,
-      "text": "Required attribution is accurate, inside the safe area, and genuinely readable."
+      "text": "Attribution is accurate and placed where its license requires: artwork, metadata, or documentation."
     }
   ]
 }
-

@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile Python
+        run: python -m py_compile scripts/headline_brief.py scripts/run_evals.py
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate eval specification
+        run: python scripts/run_evals.py --validate
+      - name: Run deterministic evals
+        run: python scripts/run_evals.py --rollout
+      - name: Check JSON assets
+        run: python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('.').rglob('*.json')]"
+      - name: Check POSIX installer
+        if: runner.os == 'Linux'
+        run: sh -n install.sh && sh install.sh --dry-run
+      - name: Check PowerShell installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\install.ps1 -DryRun

@@ -18,9 +18,15 @@ The skill does not depend on a scraping API at runtime. Article URLs are declare
 
 The original image article treats the absence of an explicit prohibition as potentially usable with attribution. This skill uses a stricter rule: silence is not permission. Third-party assets require ownership, an explicit license, explicit permission, or public-domain status. Unknown rights are blocked and replaced with user-owned screenshots or newly generated material.
 
+Rights records use stable asset IDs so two different files may share a human label without colliding. Attribution is recorded separately from its placement: only licenses requiring `artwork` attribution consume banner space; `metadata` and `readme` attribution remain in delivery records.
+
+## Canvas extension
+
+The tutorials' official presets remain 3200×560 and 1600×280. Version 1.1.0 adds the user-requested 600×200 compact preset with a declared 420×168 safe area. Arbitrary dimensions are accepted only with an explicit in-bounds safe-area rectangle, because the 40:7 crop assumptions cannot be inferred for other aspect ratios.
+
 ## Image-tool boundary
 
-The creative workflow is intentionally not reduced to a fake deterministic renderer. The host's image generation/editing capability produces or edits the bitmap. The bundled Python script validates the brief, safe area, rights record, and QA contract only. Exact Chinese text is placed with a deterministic editor or vector/canvas tool after background generation.
+The creative workflow is intentionally not reduced to a fake deterministic renderer. The host's image generation/editing capability produces or edits the bitmap. The optional Python script validates the brief, safe area, rights record, and QA contract only. After creative generation, Python/Pillow may perform deterministic crop, resize, exact-text, or metadata work. Exact Chinese text is placed with a deterministic editor or vector/canvas tool after background generation.
 
 ## Artifact assessment
 
@@ -28,5 +34,8 @@ The agent-skill-creator artifact detector returned `None`. The requested output 
 
 ## Evaluation strategy
 
-Five independent checks define success: valid structured output, exact supported canvas and safe area, conservative asset approval, semantically faithful title hierarchy, and composition/legibility quality. Three golden inputs cover a long guide title, a user-owned screenshot, and an unknown-rights illustration. The creative end-to-end image workflow has no deterministic `run` command; the brief validator is covered by unit tests.
+Six independent checks define success: valid structured output, internally valid canvas and safe area, conservative asset approval, semantically faithful title hierarchy, composition quality, and exact readable copy. Three accepted golden outputs cover a long guide title, a user-owned screenshot, and an unknown-rights illustration. The deterministic brief validator has a runnable rollout; creative image quality remains a manual/LLM judge boundary.
 
+## Installation and automation
+
+Installers are intentionally narrower and safer than an unconditional copy: they default to the universal Agent Skills path, require an explicit force flag before replacing one exact skill directory, reject broad targets, and provide dry-run mode. CI verifies supported Python versions on Windows and Linux without adding runtime dependencies.

@@ -16,26 +16,38 @@
   "layering_requested": false,
   "commercial_context": false,
   "font": {
+    "id": "font",
     "name": "已选字体名",
     "rights_status": "open",
     "commercial_allowed": true,
-    "source": "字体官方许可页"
+    "creator": "字体项目",
+    "source": "字体官方许可页",
+    "attribution_required": true,
+    "attribution_placement": "metadata"
   },
   "source_assets": [
     {
+      "id": "user-screenshot-1",
       "label": "用户游戏截图",
       "creator": "用户本人",
       "source": "本次会话附件",
       "rights_status": "owned",
       "commercial_allowed": true,
-      "attribution": ""
+      "attribution": "",
+      "attribution_required": false,
+      "attribution_placement": "none"
     }
   ],
   "notes": "庄严、克制，不要花哨"
 }
 ```
 
-允许的 `resolution`：`high`（3200×560）或 `standard`（1600×280）。
+允许的 `resolution`：
+
+- `high`：3200×560，安全区 `x=1020..2180, y=0..560`。
+- `standard`：1600×280，安全区 `x=510..1090, y=0..280`。
+- `compact`：600×200，安全区 `x=90..510, y=16..184`。
+- 自定义对象：必须包含 `width`、`height` 和 `safe_area: {x, y, width, height}`；安全区必须完全位于画布内。
 
 允许的 `composition_mode`：
 
@@ -53,6 +65,8 @@
 - `public-domain`
 - `unknown`
 - `prohibited`
+
+每个素材可提供稳定且唯一的 `id`；未提供时校验器按顺序生成。`attribution_required` 表示许可证是否要求署名，`attribution_placement` 可为 `artwork`、`metadata`、`readme` 或 `none`。第三方开放/授权素材缺省按需要署名处理，但默认记录到元数据，不自动画进头条。
 
 运行校验：
 
@@ -128,6 +142,14 @@ python scripts/headline_brief.py --input brief.json --output validated-brief.jso
 - 建议主标题最大视觉宽度：不超过 540 px。
 - 建议副标题/作者：中心安全区内，距边缘至少 20 px。
 
+### 紧凑 600×200
+
+- 画布：`x=0..600, y=0..200`
+- 关键文字安全区：`x=90..510, y=16..184`
+- 建议主标题中心：`(300, 86)` 左右，副标题与作者放在下方。
+- 建议主标题最大视觉宽度：不超过 390 px。
+- 小尺寸优先减少副文和装饰，不用缩成不可读的小字。
+
 这些是起始坐标，不是要求所有标题机械同轴。任何偏移都不能让关键信息越出安全区。
 
 ## 4. 图像生成提示词结构
@@ -135,7 +157,7 @@ python scripts/headline_brief.py --input brief.json --output validated-brief.jso
 生成式图像工具只负责背景、人物氛围或素材，不负责最终中文标题。
 
 ```text
-目标：为 JX3BOX 剑网3攻略制作超宽横幅背景，比例 40:7。
+目标：为 JX3BOX 剑网3攻略制作横幅背景，尺寸与比例为<所选画布>。
 主题：<门派/副本/攻略主题>。
 构图：<direct/flow/interlock 对应描述>。
 主体：<人物/武器/场景>位于<左/右/两侧>，中心保留清晰低噪声区域。
@@ -155,7 +177,7 @@ python scripts/headline_brief.py --input brief.json --output validated-brief.jso
 5. 放副标题和作者，建立层级。
 6. 根据背景加最少量的投影、描边、发光或半透明底。
 7. 如需穿插，复制标题层并用蒙版分成前后两层。
-8. 放素材署名，确认可读但不抢主标题。
+8. 仅在许可证要求 `artwork` 署名时放入画面，并确认可读但不抢主标题；其他署名写入元数据或交付说明。
 9. 100% 和 25% 缩放复核中文和层级。
 
 ## 6. 现有头条改稿
@@ -179,12 +201,12 @@ python scripts/headline_brief.py --input brief.json --output validated-brief.jso
 
 ```markdown
 成品：`<absolute-path>`
-尺寸：3200×560
+尺寸：3200×560（或实际请求尺寸）
 主标题：明尊攻略
 副标题：从入门到进阶的实战指南
 构图：直接图文；人物在左，文字保持中心安全区
 字体：<名称>；<授权状态和来源>
-图片：用户自有游戏截图；无需第三方署名
+图片：用户自有游戏截图；无需第三方署名；字体署名记录在元数据
 复核：安全区通过；25% 可读；中文逐字正确；主体无遮挡；版权通过
 ```
 
@@ -196,4 +218,3 @@ python scripts/headline_brief.py --input brief.json --output validated-brief.jso
 版式：<坐标、字号比例、对齐和颜色>
 原因：当前宿主没有可验证的精确中文排版能力，未将生成伪字当作成品。
 ```
-

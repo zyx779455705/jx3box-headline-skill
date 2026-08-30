@@ -3,11 +3,16 @@ set -eu
 
 SKILL_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-if command -v python3 >/dev/null 2>&1; then
-    RUNTIME_PYTHON=python3
-elif command -v python >/dev/null 2>&1; then
-    RUNTIME_PYTHON=python
-else
+RUNTIME_PYTHON=""
+for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 &&
+        "$candidate" -c 'import sys; raise SystemExit(sys.version_info < (3, 10))' >/dev/null 2>&1; then
+        RUNTIME_PYTHON="$candidate"
+        break
+    fi
+done
+
+if [ -z "$RUNTIME_PYTHON" ]; then
     printf '%s\n' '{"error":"Python 3.10+ was not found","error_type":"runtime","hint":"Install Python and retry."}' >&2
     exit 1
 fi

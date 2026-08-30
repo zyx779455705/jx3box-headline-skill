@@ -46,7 +46,7 @@ import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
+import uuid
 from pathlib import Path
 
 VALID_TYPES = ("command", "llm-judge")
@@ -258,9 +258,10 @@ def run_rollout(
 
     For each golden case the spec's `run` command produces an output into a temp
     file; that output is then scored through the same command criteria used by
-    run_command_checks. When `promote` is set, a pending-first-green case whose
-    run and checks all pass has its produced output captured as the `expected`
-    baseline.
+    run_command_checks. Cases with an accepted expected file also require JSON
+    equality with that baseline. When `promote` is set, a pending-first-green
+    case whose run and checks all pass has its produced output captured as the
+    `expected` baseline.
 
     Returns {passed, failed, errors, promoted, checks}. `errors` counts cases
     whose `run` command itself failed or timed out (their checks are not scored).
@@ -279,8 +280,10 @@ def run_rollout(
         inp = case.get("input")
         input_path = (evals_dir / inp) if inp else None
 
-        with tempfile.TemporaryDirectory() as td:
-            produced = Path(td) / "output"
+        # Use a temporary file, not TemporaryDirectory. Managed Windows hosts
+        # can apply an unreadable ACL to Python-created temporary directories.
+        produced = skill_dir / f".eval-{uuid.uuid4().hex}.json"
+        try:
             ok = _run_skill(run_cmd, input_path, produced, skill_dir, timeout)
             if not ok or not produced.exists():
                 errors += 1
@@ -292,6 +295,25 @@ def run_rollout(
             failed += scored["failed"]
             checks.extend(scored["checks"])
 
+            expected = case.get("expected")
+            if expected:
+                baseline_path = evals_dir / expected
+                try:
+                    produced_payload = json.loads(produced.read_text(encoding="utf-8"))
+                    expected_payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+                    baseline_ok = produced_payload == expected_payload
+                except (OSError, json.JSONDecodeError):
+                    baseline_ok = False
+                passed += baseline_ok
+                failed += not baseline_ok
+                checks.append(
+                    {
+                        "case": case_id,
+                        "criterion": "golden-baseline",
+                        "status": "pass" if baseline_ok else "fail",
+                    }
+                )
+
             is_pending = case.get("expected") is None and (
                 case.get("expected_status") == "pending-first-green"
             )
@@ -300,6 +322,8 @@ def run_rollout(
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(produced, dest)
                 promoted.append(case_id)
+        finally:
+            produced.unlink(missing_ok=True)
 
     return {
         "passed": passed,
