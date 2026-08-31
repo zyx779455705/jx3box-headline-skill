@@ -6,7 +6,7 @@ license: MIT
 activation: /jx3box-headline-skill
 metadata:
   author: zyx779455705
-  version: 1.2.0
+  version: 1.2.1
   created: 2026-08-31
   last_reviewed: 2026-08-31
   review_interval_days: 90
@@ -22,7 +22,7 @@ metadata:
       type: reference
 provenance:
   maintainer: zyx779455705
-  version: 1.2.0
+  version: 1.2.1
   created: 2026-08-31
 compatibility: >-
   Works on hosts that support Agent Skills. Final bitmap generation or editing
@@ -136,11 +136,14 @@ Do NOT activate on general image, poster, avatar, social banner, or typography q
 5. 版权记录完整；任何来源不明素材已替换。
 6. 配色、对齐、方向和前后层次统一，没有为了“高级”而堆效果。
 
-交付必须包含：最终图片路径或预览、最终主/副标题、构图模式、素材与字体授权说明、QA 结果。若宿主无法做精确中文字排版，明确交付“无字背景 + 已验证设计简报”，不要宣称已完成成品。
+交付必须包含：最终图片路径或预览、最终主/副标题、构图模式、素材与字体授权说明、QA 结果。每篇文章建立一个独立交付目录；目录至少保存原始生成背景、目标尺寸无字背景和最终成品，不能只把背景留在宿主生成缓存中。具体命名和可选说明文件按 `references/workflow-guide.md` 的交付模板执行。若宿主无法做精确中文字排版，明确交付“无字背景 + 已验证设计简报”，不要宣称已完成成品。
 
 ## Output Contract
 
 ```text
+目录：<jx3box_headline_文章ID 或主题短名的绝对路径>
+原始背景：<目录内原始生成图片>
+无字背景：<目录内目标尺寸背景>
 成品：<绝对路径或可预览图片>
 尺寸：3200×560 / 1600×280 / 600×200 / 已声明安全区的自定义尺寸
 主标题：...
