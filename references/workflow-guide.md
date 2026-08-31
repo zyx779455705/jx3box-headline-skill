@@ -2,7 +2,7 @@
 
 ## 1. 输入简报模板
 
-将用户输入整理成以下 JSON。`source_assets` 为空时，技能可生成原创背景；不代表可以随意抓取网络图片。
+将用户输入整理成以下结构。`source_assets` 为空时，技能可生成原创背景；不代表可以随意抓取网络图片。JSON 只是便于记录的格式，不依赖程序执行。
 
 ```json
 {
@@ -10,7 +10,7 @@
   "main_title": "明尊攻略",
   "subtitle": "从入门到进阶的实战指南",
   "author": "作者名",
-  "resolution": "high",
+  "resolution": "standard",
   "composition_mode": "auto",
   "subject_position": "left",
   "layering_requested": false,
@@ -44,8 +44,9 @@
 
 允许的 `resolution`：
 
-- `high`：3200×560，安全区 `x=1020..2180, y=0..560`。
-- `standard`：1600×280，安全区 `x=510..1090, y=0..280`。
+- 省略该字段时默认 `standard`：1600×280，安全区 `x=510..1090, y=0..280`。
+- `high`：仅在用户明确要求高清或 3200×560 时使用，安全区 `x=1020..2180, y=0..560`。
+- `standard`：显式指定标准版，尺寸与默认值相同。
 - `compact`：600×200，安全区 `x=90..510, y=16..184`。
 - 自定义对象：必须包含 `width`、`height` 和 `safe_area: {x, y, width, height}`；安全区必须完全位于画布内。
 
@@ -66,15 +67,9 @@
 - `unknown`
 - `prohibited`
 
-每个素材可提供稳定且唯一的 `id`；未提供时校验器按顺序生成。`attribution_required` 表示许可证是否要求署名，`attribution_placement` 可为 `artwork`、`metadata`、`readme` 或 `none`。第三方开放/授权素材缺省按需要署名处理，但默认记录到元数据，不自动画进头条。
+每个素材使用稳定且唯一的 `id`；可按素材顺序命名为 `asset-1`、`asset-2`。`attribution_required` 表示许可证是否要求署名，`attribution_placement` 可为 `artwork`、`metadata`、`readme` 或 `none`。第三方开放/授权素材缺省按需要署名处理，但默认记录到元数据，不自动画进头条。
 
-运行校验：
-
-```powershell
-python scripts/headline_brief.py --input brief.json --output validated-brief.json
-```
-
-脚本退出码为 0 只表示输入结构有效；是否可以进入成品由输出中的 `ready_for_render` 决定。
+进入成品前人工确认：画布与安全区匹配、所有素材和字体授权可核验、商业权限符合实际用途、许可证要求的署名位置已记录。任一项不清楚就更换素材，不把“能找到”视为“能使用”。
 
 ## 2. 构图决策
 

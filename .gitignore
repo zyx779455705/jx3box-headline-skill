@@ -1,5 +1,0 @@
-.venv/
-__pycache__/
-*.pyc
-evals/.rollout/
-.eval-*.json

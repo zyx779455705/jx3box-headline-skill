@@ -24,18 +24,16 @@ Rights records use stable asset IDs so two different files may share a human lab
 
 The tutorials' official presets remain 3200×560 and 1600×280. Version 1.1.0 adds the user-requested 600×200 compact preset with a declared 420×168 safe area. Arbitrary dimensions are accepted only with an explicit in-bounds safe-area rectangle, because the 40:7 crop assumptions cannot be inferred for other aspect ratios.
 
+Version 1.1.1 makes 1600×280 the default output. The 3200×560 high preset is selected only when the user explicitly requests high resolution or that exact size; compact and custom dimensions also remain explicit choices.
+
 ## Image-tool boundary
 
-The creative workflow is intentionally not reduced to a fake deterministic renderer. The host's image generation/editing capability produces or edits the bitmap. The optional Python script validates the brief, safe area, rights record, and QA contract only. After creative generation, Python/Pillow may perform deterministic crop, resize, exact-text, or metadata work. Exact Chinese text is placed with a deterministic editor or vector/canvas tool after background generation.
+The creative workflow is intentionally not reduced to a fake deterministic renderer. The host's image generation/editing capability produces or edits the bitmap. Exact Chinese text is placed with a deterministic editor or vector/canvas tool after background generation. Brief, safe-area, rights, and QA checks are kept as concise skill instructions rather than a bundled runtime.
 
 ## Artifact assessment
 
 The agent-skill-creator artifact detector returned `None`. The requested output is a bitmap headline, not a time series, comparison chart, KPI panel, or data table, so no React artifact template is embedded.
 
-## Evaluation strategy
+## Distribution
 
-Six independent checks define success: valid structured output, internally valid canvas and safe area, conservative asset approval, semantically faithful title hierarchy, composition quality, and exact readable copy. Three accepted golden outputs cover a long guide title, a user-owned screenshot, and an unknown-rights illustration. The deterministic brief validator has a runnable rollout; creative image quality remains a manual/LLM judge boundary.
-
-## Installation and automation
-
-Installers are intentionally narrower and safer than an unconditional copy: they default to the universal Agent Skills path, require an explicit force flag before replacing one exact skill directory, reject broad targets, and provide dry-run mode. CI verifies supported Python versions on Windows and Linux without adding runtime dependencies.
+The repository contains only the skill instructions and supporting references. Users clone it directly into their host's native skill directory; no installer, validator runtime, or CI package is bundled.
