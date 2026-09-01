@@ -1,6 +1,6 @@
 # JX3BOX Headline Skill
 
-为剑网3魔盒 JX3BOX 文章制作、修改和审查 `3200×560`、`1600×280`、`600×200` 或带显式安全区的自定义头条图。技能覆盖标题压缩、字体与图片授权、三类图文构图、精确中文排版和交付 QA。
+为剑网3魔盒 JX3BOX 文章制作、修改和审查 `3200×560`、`1600×280`、`600×200` 或带显式安全区的自定义头条图。未指定尺寸时默认输出 `3200×560`；指定什么像素尺寸就生成什么尺寸，不进行隐式倍率换算。技能覆盖标题压缩、字体与图片授权、三类图文构图、精确中文排版和交付 QA。
 
 ## Installation
 
@@ -66,7 +66,7 @@ Other examples:
 
 按 `references/workflow-guide.md` 整理并人工核对设计简报。任何素材或字体授权不明时停止使用并更换，不依赖脚本自动放行。
 
-`resolution` 省略时默认 `standard`（1600×280）；只有明确要求高清时才使用 `high`（3200×560），也可显式使用 `compact`（600×200）。其他尺寸必须提供完整的 `safe_area`。素材最好提供唯一 `id`。署名通过 `attribution_required` 和 `attribution_placement` 区分画内、元数据与 README，不再把所有第三方字体署名都画进头条。
+`resolution` 省略时默认 `3200×560`；显式指定 `1600×280`、`600×200` 或自定义尺寸时，最终文件就使用该实际像素尺寸。`@2x`、Retina 或高清描述不会覆盖明确像素数；需要更大文件时必须直接写出目标宽高。素材最好提供唯一 `id`。署名通过 `attribution_required` 和 `attribution_placement` 区分画内、元数据与 README，不再把所有第三方字体署名都画进头条。
 
 ## Source material
 
@@ -84,6 +84,7 @@ The skill is self-contained at runtime. Review those pages when the dependency s
 
 - Unknown image rights: replace the asset; attribution alone is not permission.
 - Generated Chinese pseudo-text: keep the background and re-typeset exact copy with a deterministic editor.
+- Low-resolution source: regenerate or reliably enhance it before typography; ordinary interpolation is not a valid high-resolution deliverable.
 - Title outside the center safe area: shorten, move, or reflow it; do not hide the issue by cropping.
 - No image tool: deliver an honest no-text background prompt and reviewed layout brief, not a fake finished path.
 

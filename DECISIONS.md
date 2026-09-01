@@ -26,6 +26,10 @@ The tutorials' official presets remain 3200×560 and 1600×280. Version 1.1.0 ad
 
 Version 1.1.1 makes 1600×280 the default output. The 3200×560 high preset is selected only when the user explicitly requests high resolution or that exact size; compact and custom dimensions also remain explicit choices.
 
+Version 1.3.0 supersedes the physical-output part of that decision: user dimensions are now treated as 1× logical display sizes and delivered at `@2x` by default. Thus logical 1600×280 produces 3200×560, logical 600×200 produces 1200×400, and custom canvases and safe areas are doubled consistently. Only an explicit 1× or exact-physical-pixel request disables the multiplier. The skill exports only the `@2x` set by default and rejects ordinary interpolation enlargement as fake high-resolution output.
+
+Version 1.4.0 supersedes the sizing semantics from 1.3.0. Every stated width and height now means the final file's exact physical pixels, with no implicit multiplier. Omitted dimensions default to 3200×560; explicit 1600×280, 600×200, or custom dimensions are delivered exactly as written. Terms such as `@2x`, Retina, or high resolution do not override an explicit pixel size. The source-quality rule remains: low-resolution finished art must not be enlarged with ordinary interpolation and presented as genuinely detailed output.
+
 ## Image-tool boundary
 
 The creative workflow is intentionally not reduced to a fake deterministic renderer. The host's image generation/editing capability produces or edits the bitmap. Exact Chinese text is placed with a deterministic editor or vector/canvas tool after background generation. Brief, safe-area, rights, and QA checks are kept as concise skill instructions rather than a bundled runtime.
